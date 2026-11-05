@@ -21,58 +21,89 @@ async function getEngine() {
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.toneMapping = THREE.AgXToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1.05;
     renderer.setClearColor(0x000000, 0);
 
     const scene = new THREE.Scene();
     const pmrem = new THREE.PMREMGenerator(renderer);
-    // Studio environment: dark room with a few bright softboxes -> crisp, contrasty reflections
+
+    // ---- Studio environment (generated, no image files) ----
+    // Soft-edged softboxes + a warm floor bounce + dark ceiling give metals and glass
+    // smooth gradients and crisp highlights, like a product photo studio.
+    const glowTex = (inner, outer) => new THREE.CanvasTexture(noiseCanvas(256, (x, s) => {
+      const g = x.createRadialGradient(s / 2, s / 2, s * inner, s / 2, s / 2, s * outer);
+      g.addColorStop(0, "#fff"); g.addColorStop(1, "#000"); x.fillStyle = g; x.fillRect(0, 0, s, s);
+    }));
+    const softTex = glowTex(0.18, 0.5);
     const studio = new THREE.Scene();
-    studio.background = new THREE.Color(0x050505);
-    const box = (w, h, x, y, z, ry, rx, v, tint = 0xffffff) => {
-      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(tint).multiplyScalar(v), side: THREE.DoubleSide });
-      const o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); o.position.set(x, y, z); o.rotation.set(rx, ry, 0); studio.add(o);
+    // backdrop sphere: dark top, mid-grey horizon, warm floor
+    const sky = new THREE.CanvasTexture(noiseCanvas(512, (x, s) => {
+      const g = x.createLinearGradient(0, 0, 0, s);
+      g.addColorStop(0, "#0b0b0b"); g.addColorStop(0.4, "#2a2a2a"); g.addColorStop(0.5, "#8a847d");
+      g.addColorStop(0.58, "#3a3029"); g.addColorStop(1, "#4a3424"); x.fillStyle = g; x.fillRect(0, 0, s, s);
+    }));
+    sky.colorSpace = THREE.SRGBColorSpace;
+    studio.add(new THREE.Mesh(new THREE.SphereGeometry(20, 32, 16), new THREE.MeshBasicMaterial({ map: sky, side: THREE.BackSide })));
+    const soft = (w, h, x, y, z, v, tint = 0xffffff) => {
+      const m = new THREE.MeshBasicMaterial({ color: new THREE.Color(tint).multiplyScalar(v), map: softTex, side: THREE.DoubleSide,
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+      const o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); o.position.set(x, y, z); o.lookAt(0, 0, 0); studio.add(o);
     };
-    box(6, 1.2, 0, 4, 2, 0, Math.PI / 2.4, 6);              // top strip
-    box(1.2, 7, -5, 0, 1, Math.PI / 2.3, 0, 4);             // left strip
-    box(1.6, 6, 5, 0.5, -1, -Math.PI / 2.2, 0, 3.5, 0xffe8d8); // warm right strip
-    box(8, 3, 0, -1, -6, 0, 0, 1.2);                        // soft back fill
-    box(3, 3, 2.5, 2, 6, Math.PI, 0, 2.5);                  // front key
-    scene.environment = pmrem.fromScene(studio, 0.02).texture;
-    const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(3, 4, 5); scene.add(key);
-    const rim = new THREE.DirectionalLight(0xffe6d0, 1.2); rim.position.set(-4, 2, -3); scene.add(rim);
+    soft(9, 3, 0, 7, 2, 7);                 // overhead strip
+    soft(3, 10, -8, 1, 3, 5);               // left tall softbox
+    soft(3, 9, 8, 0, -2, 4, 0xffe2c8);      // warm right kicker
+    soft(7, 7, 3, 2, 9, 5);                 // front key
+    soft(5, 5, -5, -2, 8, 2.5);             // low front fill
+    soft(14, 3, 0, -2, -9, 1.5, 0xffd6b0);  // warm back rim
+    scene.environment = pmrem.fromScene(studio, 0.01).texture;
+    const key = new THREE.DirectionalLight(0xffffff, 1.2); key.position.set(3, 4, 5); scene.add(key);
+
+    // ---- Light-weight procedural textures ----
+    const rand = (a) => { let t = a; return () => ((t = Math.sin(t * 9301 + 49297) * 233280) - Math.floor(t)); };
+    const wood = new THREE.CanvasTexture(noiseCanvas(1024, (x, s) => {
+      const r = rand(7);
+      for (let y = 0; y < s; y++) {
+        const w = y + Math.sin(y * 0.011) * 22 + Math.sin(y * 0.047) * 5;
+        const ring = 0.5 + 0.5 * Math.sin(w * 0.16);
+        const late = Math.pow(ring, 3);
+        const R = 150 - late * 70 + Math.sin(y * 0.003) * 12, G = 92 - late * 48, B = 52 - late * 30;
+        x.fillStyle = `rgb(${R|0},${G|0},${B|0})`; x.fillRect(0, y, s, 1);
+      }
+      for (let i = 0; i < 5000; i++) { x.fillStyle = `rgba(40,18,6,${r() * 0.1})`; x.fillRect(r() * s, r() * s, 30 + r() * 220, 1); }
+      for (let i = 0; i < 1500; i++) { x.fillStyle = `rgba(255,220,180,${r() * 0.05})`; x.fillRect(r() * s, r() * s, 20 + r() * 120, 1); }
+    }));
+    wood.colorSpace = THREE.SRGBColorSpace; wood.wrapS = wood.wrapT = THREE.RepeatWrapping; wood.anisotropy = 8;
+    const brushed = new THREE.CanvasTexture(noiseCanvas(512, (x, s) => {
+      const r = rand(3); x.fillStyle = "#808080"; x.fillRect(0, 0, s, s);
+      for (let i = 0; i < 6000; i++) { const g = 60 + r() * 150; x.fillStyle = `rgba(${g},${g},${g},.25)`; x.fillRect(0, r() * s, s, 0.6 + r()); }
+    }));
+    brushed.wrapS = brushed.wrapT = THREE.RepeatWrapping;
+    const smudge = new THREE.CanvasTexture(noiseCanvas(256, (x, s) => {
+      const r = rand(11); x.fillStyle = "#3a3a3a"; x.fillRect(0, 0, s, s);
+      for (let i = 0; i < 60; i++) { const g = x.createRadialGradient(0, 0, 0, 0, 0, 10 + r() * 40); g.addColorStop(0, "rgba(140,140,140,.25)"); g.addColorStop(1, "rgba(0,0,0,0)");
+        x.save(); x.translate(r() * s, r() * s); x.fillStyle = g; x.fillRect(-50, -50, 100, 100); x.restore(); }
+    }));
+    smudge.wrapS = smudge.wrapT = THREE.RepeatWrapping;
+
+    const mats = {
+      // polished gold with faint smudges
+      gold: new THREE.MeshPhysicalMaterial({ color: 0xffcf73, metalness: 1, roughness: 0.26, roughnessMap: smudge, envMapIntensity: 1.3 }),
+      // mirror-polished stainless
+      stainless: new THREE.MeshPhysicalMaterial({ color: 0xf2f4f7, metalness: 1, roughness: 0.2, roughnessMap: smudge, envMapIntensity: 1.6 }),
+      // solid glass block: deep body, bright edges, slight rainbow sheen
+      glass: new THREE.MeshPhysicalMaterial({ color: 0x1d2b30, metalness: 0.0, roughness: 0.0, ior: 1.9,
+        clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 4, specularIntensity: 1, specularColor: new THREE.Color(0xffffff),
+        iridescence: 0.45, iridescenceIOR: 1.3, iridescenceThicknessRange: [200, 600],
+        sheen: 1, sheenRoughness: 0.25, sheenColor: new THREE.Color(0x9fdcff) }),
+      // oiled walnut with satin lacquer
+      wood: new THREE.MeshPhysicalMaterial({ map: wood, roughness: 0.55, clearcoat: 0.5, clearcoatRoughness: 0.25, bumpMap: wood, bumpScale: 0.8 }),
+      // brushed industrial steel
+      steel: new THREE.MeshPhysicalMaterial({ color: 0xa4a7ac, metalness: 1, roughness: 0.48, roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.35, envMapIntensity: 1.5 }),
+    };
 
     const camera = new THREE.PerspectiveCamera(18, 1, 1, 200);
     camera.position.set(0, 0, 40);
-
-    // light-weight procedural textures (no image files)
-    const wood = new THREE.CanvasTexture(noiseCanvas(512, (x, s) => {
-      for (let y = 0; y < s; y++) {
-        const v = 0.5 + 0.5 * Math.sin(y * 0.09 + Math.sin(y * 0.013) * 6 + Math.sin(y * 0.002) * 12);
-        const r = 70 + v * 95, g = 34 + v * 52, b = 14 + v * 22;
-        x.fillStyle = `rgb(${r|0},${g|0},${b|0})`; x.fillRect(0, y, s, 1);
-      }
-      for (let i = 0; i < 1400; i++) { x.fillStyle = `rgba(30,12,4,${Math.random()*0.12})`; x.fillRect(Math.random()*s, Math.random()*s, 40 + Math.random()*120, 1); }
-    }));
-    wood.colorSpace = THREE.SRGBColorSpace; wood.wrapS = wood.wrapT = THREE.RepeatWrapping; wood.rotation = Math.PI / 2;
-    const brushed = new THREE.CanvasTexture(noiseCanvas(256, (x, s) => {
-      x.fillStyle = "#888"; x.fillRect(0, 0, s, s);
-      for (let i = 0; i < 2200; i++) { const g = 90 + Math.random() * 120; x.fillStyle = `rgba(${g},${g},${g},.35)`; x.fillRect(0, Math.random()*s, s, Math.random()*1.5); }
-    }));
-    brushed.wrapS = brushed.wrapT = THREE.RepeatWrapping;
-
-    const mats = {
-      gold: new THREE.MeshPhysicalMaterial({ color: 0xffc35c, metalness: 1, roughness: 0.14 }),
-      stainless: new THREE.MeshPhysicalMaterial({ color: 0xf5f7fa, metalness: 1, roughness: 0.17 }),
-      // solid glass: opaque, cool-tinted body with crisp highlights and a slight rainbow sheen
-      glass: new THREE.MeshPhysicalMaterial({ color: 0x5d8794, metalness: 0.1, roughness: 0.0, ior: 1.7,
-        clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 3.4, specularIntensity: 1, specularColor: new THREE.Color(0xffffff),
-        iridescence: 0.7, iridescenceIOR: 1.3, iridescenceThicknessRange: [200, 600],
-        sheen: 0.6, sheenRoughness: 0.3, sheenColor: new THREE.Color(0xbfeaff) }),
-      wood: new THREE.MeshPhysicalMaterial({ map: wood, roughness: 0.5, clearcoat: 0.35, clearcoatRoughness: 0.3 }),
-      steel: new THREE.MeshPhysicalMaterial({ color: 0x8a8d92, metalness: 1, roughness: 0.38, roughnessMap: brushed, bumpMap: brushed, bumpScale: 0.6 }),
-    };
 
     const loader = new GLTFLoader();
     const cache = {};
@@ -82,8 +113,15 @@ async function getEngine() {
       const size = new THREE.Vector3(); geo.boundingBox.getSize(size);
       geo.scale(1.6 / size.y, 1.6 / size.y, 1.6 / size.y);
       // simple box UVs so the wood grain wraps the letter
-      const pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
-      for (let i = 0; i < pos.count; i++) { uv[i*2] = pos.getX(i) * 0.6 + pos.getZ(i) * 0.6; uv[i*2+1] = pos.getY(i) * 0.6; }
+      const pos = geo.attributes.position, nor = geo.attributes.normal, uv = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) {
+        const nx = Math.abs(nor.getX(i)), ny = Math.abs(nor.getY(i)), nz = Math.abs(nor.getZ(i));
+        let u, v;
+        if (nz >= nx && nz >= ny) { u = pos.getX(i); v = pos.getY(i); }        // front / back
+        else if (nx >= ny) { u = pos.getZ(i); v = pos.getY(i); }              // left / right sides
+        else { u = pos.getX(i); v = pos.getZ(i); }                            // top / bottom
+        uv[i*2] = u * 0.45; uv[i*2+1] = v * 0.45;
+      }
       geo.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
       return geo;
     }));
