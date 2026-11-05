@@ -3,17 +3,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import HeatWordmark from "./HeatWordmark";
-import Letter3D, { preload3D } from "./Letter3D";
+import Wordmark3D, { preload3D, wordmark3D } from "./Wordmark3D";
 
 // Wordmark style on the home intro:
 //   "heat" = thermal glow effect (red/orange), moves on hover
 //   "swap" = letters swap to alternate glyphs on hover (previous version)
 const WORDMARK_STYLE = "swap";
+// true = hovering a letter shows a live 3D letter (gold, glass, steel, wood…) instead of the flat glyph swap
+const LETTERS_3D = true;
 
 // Letters of the name. `keep` = stays when the name collapses to "PE".
 // `alt` = placeholder swap shown on hover — replace with Paul's own glyphs/images later.
 const LETTERS = [
-  { ch: "P", keep: true, alt: "◐", model: "P" }, // model = live 3D letter on hover
+  { ch: "P", keep: true, alt: "◐" },
   { ch: "A", alt: "△" },
   { ch: "U", alt: "∪", serif: true },
   { ch: "L", alt: "⌐" },
@@ -31,13 +33,14 @@ export default function Header() {
   const [swapped, setSwapped] = useState(-1);
   const wmRef = useRef(null);
   const heat = WORDMARK_STYLE === "heat" && isHome;
-  const [three, setThree] = useState(null); // { ch, rect, key, active }
+  const [use3D, setUse3D] = useState(false); // live 3D letters on hover (desktop only)
 
   useEffect(() => {
-    if (heat || !window.matchMedia("(hover: hover)").matches) return;
-    LETTERS.filter((l) => l.model).forEach((l) => preload3D(l.model));
+    const ok = !heat && LETTERS_3D && window.matchMedia("(hover: hover)").matches;
+    setUse3D(ok);
+    if (ok) preload3D([...new Set(LETTERS.filter((l) => l.ch).map((l) => l.ch))]);
   }, [heat]);
-  useEffect(() => { if (compact) setThree((t) => t && { ...t, active: false }); }, [compact]);
+  useEffect(() => { if (compact) { wordmark3D.leaveAll(); setSwapped(-1); } }, [compact]);
 
   useEffect(() => {
     if (!isHome) { setCompact(true); return; }
@@ -71,15 +74,14 @@ export default function Header() {
             <span
               key={i}
               aria-hidden
-              className={`wm-letter ${l.keep ? "keep" : "drop"} ${on ? (l.model && !compact ? "swapped three" : "swapped") : ""} ${l.serif && on ? "serif" : ""}`}
+              className={`wm-letter ${l.keep ? "keep" : "drop"} ${on ? (use3D && !compact ? "swapped three" : "swapped") : ""} ${l.serif && on ? "serif" : ""}`}
               style={{ animationDelay: `${delay}ms` }}
               onMouseEnter={(ev) => {
-                if (heat) return;
+                if (heat || compact) return;
                 setSwapped(i);
-                if (l.model && !compact && window.matchMedia("(hover: hover)").matches)
-                  setThree({ ch: l.model, rect: ev.currentTarget.getBoundingClientRect(), key: Date.now(), active: true });
+                if (use3D) wordmark3D.enter(i, l.ch, ev.currentTarget.getBoundingClientRect());
               }}
-              onMouseLeave={() => { setSwapped(-1); setThree((t) => t && { ...t, active: false }); }}
+              onMouseLeave={() => { setSwapped((s) => (s === i ? -1 : s)); if (use3D) wordmark3D.leave(i); }}
             >
               <span className="wm-base">{l.ch}</span>
               <span className="wm-alt">{l.alt}</span>
@@ -87,7 +89,7 @@ export default function Header() {
           );
         })}
       </Link>
-      {three && <Letter3D key={three.key} ch={three.ch} rect={three.rect} active={three.active} />}
+      {use3D && <Wordmark3D />}
       <nav className="nav">
         <Link href="/work">Work</Link>
         <Link href="/about">About</Link>
