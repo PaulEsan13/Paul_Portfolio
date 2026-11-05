@@ -3,12 +3,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import HeatWordmark from "./HeatWordmark";
+import MenuPill from "./MenuPill";
 import Wordmark3D, { preload3D, wordmark3D } from "./Wordmark3D";
 
 // Wordmark style on the home intro:
 //   "heat" = thermal glow effect (red/orange), moves on hover
 //   "swap" = letters swap to alternate glyphs on hover (previous version)
-const WORDMARK_STYLE = "swap";
+const WORDMARK_STYLE = "heat";
 // true = hovering a letter shows a live 3D letter (gold, glass, steel, wood…) instead of the flat glyph swap
 const LETTERS_3D = true;
 
@@ -90,6 +91,7 @@ export default function Header() {
         })}
       </Link>
       {use3D && <Wordmark3D />}
+      <MenuPill show={compact} />
       <nav className="nav">
         <Link href="/work">Work</Link>
         <Link href="/about">About</Link>
