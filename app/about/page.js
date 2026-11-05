@@ -3,7 +3,7 @@ export default function About() {
     <section className="page">
       <h1>About</h1>
       <p className="lead">
-        7–8 years designing brand identities across tech and fashion, from strategy to
+        Paul Esan — 7–8 years designing brand identities across tech and fashion, from strategy to
         identity systems, motion and art direction.
       </p>
     </section>

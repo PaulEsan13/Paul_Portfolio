@@ -1,31 +1,48 @@
+import Showreel from "./components/Showreel";
+import WorkList from "./components/WorkList";
 import Link from "next/link";
 
-const featured = [
-  { title: "AshCorp", tag: "Brand identity" },
-  { title: "Zentai", tag: "Brand identity" },
-  { title: "Project three", tag: "Coming soon" },
+const NEWS = [
+  { kind: "Thoughts", title: "Why a brand should be a source, not a logo" },
+  { kind: "Press", title: "Feature coming soon" },
+  { kind: "Process", title: "Notes from the studio" },
 ];
 
 export default function Home() {
   return (
     <>
-      <section className="hero">
-        <h1 className="reveal">
-          Brand identities for tech and fashion — built to grow.
-        </h1>
-        <p className="lead">
-          Paul Lesson is a brand identity designer and art director based in Lagos.
+      <section className="intro">
+        <p className="intro-line">
+          Brand identity designer and art director in Lagos, building identities for tech and
+          fashion brands, startups and multinationals.
         </p>
       </section>
 
-      <section className="grid">
-        {featured.map((p) => (
-          <Link href="/work" key={p.title} className="card">
-            <div className="thumb" />
-            <h3>{p.title}</h3>
-            <span>{p.tag}</span>
-          </Link>
-        ))}
+      <Showreel />
+
+      <section className="statement">
+        <p>
+          I make brands that can grow — from the first idea to full identity systems, motion and
+          the teams that bring them to life. <span className="muted">Open to senior roles and new projects.</span>
+        </p>
+      </section>
+
+      <WorkList />
+
+      <section className="news">
+        <div className="news-head">
+          <span className="eyebrow">Thoughts, press &amp; process</span>
+          <Link href="/about" className="link">View all →</Link>
+        </div>
+        <div className="news-grid">
+          {NEWS.map((n) => (
+            <article key={n.title} className="news-card">
+              <div className="news-thumb" />
+              <span className="muted small">{n.kind}</span>
+              <h4>{n.title}</h4>
+            </article>
+          ))}
+        </div>
       </section>
     </>
   );
