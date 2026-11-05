@@ -62,8 +62,11 @@ void main(){
   gl_FragColor = vec4(ramp(heat) * a, a);
 }`;
 
-export default function HeatWordmark({ host }) {
+export default function HeatWordmark({ host, compact }) {
   const canvasRef = useRef(null);
+  const compactRef = useRef(compact);
+  const api = useRef({});
+  compactRef.current = compact;
 
   useEffect(() => {
     const el = host.current;
@@ -103,6 +106,8 @@ export default function HeatWordmark({ host }) {
       H = Math.round((r.height + PAD * 2) * dpr);
       cv.width = W; cv.height = H;
       cv.style.width = W / dpr + "px"; cv.style.height = H / dpr + "px";
+      // pin the canvas to where the full-size name sits, so it never has to move or rebuild while the name animates
+      cv.style.left = r.left - PAD + "px"; cv.style.top = r.top - PAD + "px";
       gl.viewport(0, 0, W, H);
 
       const fs = parseFloat(getComputedStyle(el).fontSize) * dpr;
@@ -138,7 +143,7 @@ export default function HeatWordmark({ host }) {
       hover += (hoverTarget - hover) * Math.min(dt * 4, 1);
       if (!reduce) t += dt * (0.04 + hover * 0.9);   // barely moves idle, flows on hover
       if (reveal < 1) reveal = Math.min(1, reveal + dt * 0.9);
-      if (ready) {
+      if (ready && !compactRef.current) {
         gl.uniform1f(uT, t); gl.uniform1f(uHover, hover); gl.uniform1f(uReveal, reveal);
         gl.uniform2f(uMouse, mx, my);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -155,19 +160,30 @@ export default function HeatWordmark({ host }) {
     el.addEventListener("mousemove", onMove);
     el.addEventListener("mouseleave", onLeave);
 
-    let ro;
+    // Rebuild only when the window width really changes, and only while the name is full size.
+    let dirty = false, timer, lastW = window.innerWidth;
+    const onResize = () => {
+      if (window.innerWidth === lastW) return; // ignore mobile address-bar height changes
+      lastW = window.innerWidth;
+      clearTimeout(timer);
+      timer = setTimeout(() => { if (compactRef.current) dirty = true; else build(); }, 200);
+    };
+    window.addEventListener("resize", onResize);
+    api.current.expand = () => { if (dirty) { dirty = false; setTimeout(() => !compactRef.current && build(), 850); } };
+
     document.fonts.load(`800 100px "Mona Sans Variable"`).then(() => {
-      build(); ready = true;
-      ro = new ResizeObserver(() => build());
-      ro.observe(el);
+      if (compactRef.current) dirty = true; else build();
+      ready = true;
     });
     raf = requestAnimationFrame(frame);
 
     return () => {
-      cancelAnimationFrame(raf); ro && ro.disconnect();
+      cancelAnimationFrame(raf); clearTimeout(timer); window.removeEventListener("resize", onResize);
       el.removeEventListener("mousemove", onMove); el.removeEventListener("mouseleave", onLeave);
     };
   }, [host]);
 
-  return <canvas ref={canvasRef} className="heat-canvas" aria-hidden style={{ left: -PAD, top: -PAD }} />;
+  useEffect(() => { if (!compact) api.current.expand && api.current.expand(); }, [compact]);
+
+  return <canvas ref={canvasRef} className="heat-canvas" aria-hidden />;
 }

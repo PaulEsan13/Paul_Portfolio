@@ -66,7 +66,7 @@ export default function Header() {
   return (
     <header className={`header ${compact ? "is-compact" : ""}`}>
       <Link href="/" ref={wmRef} className={`wordmark ${heat ? "heat" : ""}`} aria-label="Paul Esan — home">
-        {heat && <HeatWordmark host={wmRef} />}
+        {heat && <HeatWordmark host={wmRef} compact={compact} />}
         {LETTERS.map((l, i) => {
           if (l.space) return <span key={i} className="wm-space" aria-hidden />;
           const delay = n++ * 70;
