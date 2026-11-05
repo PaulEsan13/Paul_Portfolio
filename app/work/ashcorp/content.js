@@ -7,7 +7,9 @@ const grid = (...items) => ({ type: "grid", items });
 export const project = {
   slug: "ashcorp",
   title: "Ashcorp Group",
-  subtitle: "Brand Identity",
+  subtitle: "One Source, Many Worlds",
+  category: "Brand Identity",
+  thanks: "Thanks for watching. Ashcorp Group — the house that builds brands.",
   year: "2026",
   role: "Brand strategy, identity, art direction, motion",
   tools: "Illustrator, After Effects, Figma",
@@ -22,7 +24,7 @@ export const sections = [
     blocks: [
       { type: "video", src: "/video/showreel.mp4", poster: "/video/showreel-poster.jpg" },
       W(0),
-      { type: "lead", text: "Ashcorp is a creative holding company and brand incubator, the operational and strategic home behind a growing family of fashion, beauty, and lifestyle brands. Where its child brands face the world directly, Ashcorp works behind the scenes: building infrastructure, shaping identity, and holding the ecosystem together. It is not a fashion house. It is the house that builds them." },
+      { type: "lead", title: "The house that builds them", text: "Ashcorp is a creative holding company and brand incubator, the operational and strategic home behind a growing family of fashion, beauty, and lifestyle brands. Where its child brands face the world directly, Ashcorp works behind the scenes: building infrastructure, shaping identity, and holding the ecosystem together. It is not a fashion house. It is the house that builds them." },
     ],
   },
   {
