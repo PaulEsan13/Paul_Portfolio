@@ -1,12 +1,9 @@
 import Showreel from "./components/Showreel";
 import WorkList from "./components/WorkList";
 import Link from "next/link";
+import { posts, fmtDate } from "./blog/posts";
 
-const NEWS = [
-  { kind: "Thoughts", title: "Why a brand should be a source, not a logo" },
-  { kind: "Press", title: "Feature coming soon" },
-  { kind: "Process", title: "Notes from the studio" },
-];
+
 
 export default function Home() {
   return (
@@ -31,16 +28,16 @@ export default function Home() {
 
       <section className="news">
         <div className="news-head">
-          <span className="eyebrow">Thoughts, press &amp; process</span>
-          <Link href="/about" className="link">View all →</Link>
+          <span className="eyebrow">Blog — write-ups, process &amp; videos</span>
+          <Link href="/blog" className="link">View all →</Link>
         </div>
         <div className="news-grid">
-          {NEWS.map((n) => (
-            <article key={n.title} className="news-card">
-              <div className="news-thumb" />
-              <span className="muted small">{n.kind}</span>
+          {posts.slice(0, 3).map((n) => (
+            <Link key={n.slug} href={`/blog/${n.slug}`} className="news-card">
+              <div className="news-thumb" style={n.cover ? { background: `#141414 url(${n.cover}) center/cover` } : undefined} />
+              <span className="muted small">{fmtDate(n.date)} · {n.type === "video" ? "Video" : "Article"}</span>
               <h4>{n.title}</h4>
-            </article>
+            </Link>
           ))}
         </div>
       </section>

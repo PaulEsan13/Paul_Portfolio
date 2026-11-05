@@ -94,6 +94,7 @@ export default function Header() {
       <MenuPill show={compact} />
       <nav className="nav">
         <Link href="/work">Work</Link>
+        <Link href="/blog">Blog</Link>
         <Link href="/about">About</Link>
         <Link href="/contact">Contact</Link>
       </nav>

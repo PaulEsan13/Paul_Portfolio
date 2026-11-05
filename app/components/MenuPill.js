@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 export const LINKS = [
   { href: "/", label: "Home" },
   { href: "/work", label: "Work" },
+  { href: "/blog", label: "Blog" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
@@ -49,7 +50,7 @@ export default function MenuPill({ show }) {
         <div className="pill-inner">
         <nav className="pill-links">
           {LINKS.filter((l) => l.href !== "/").map((l, i) => (
-            <Link key={l.href} href={l.href} style={{ transitionDelay: open ? `${80 + i * 45}ms` : "0ms" }}
+            <Link key={l.href} href={l.href} style={{ transitionDelay: open ? `${60 + i * 35}ms` : "0ms" }}
               className={current(path) === l.label ? "here" : ""} tabIndex={open ? 0 : -1}>{l.label}</Link>
           ))}
         </nav>
