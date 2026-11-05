@@ -8,7 +8,7 @@ import Wordmark3D, { preload3D, wordmark3D } from "./Wordmark3D";
 // Wordmark style on the home intro:
 //   "heat" = thermal glow effect (red/orange), moves on hover
 //   "swap" = letters swap to alternate glyphs on hover (previous version)
-const WORDMARK_STYLE = "heat";
+const WORDMARK_STYLE = "swap";
 // true = hovering a letter shows a live 3D letter (gold, glass, steel, wood…) instead of the flat glyph swap
 const LETTERS_3D = true;
 
