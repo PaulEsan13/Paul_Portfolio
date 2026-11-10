@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import HeatWordmark from "./HeatWordmark";
 import MenuPill from "./MenuPill";
+import FlameTrail from "./FlameTrail";
 import Wordmark3D, { preload3D, wordmark3D } from "./Wordmark3D";
 
 // Wordmark style on the home intro:
@@ -91,6 +92,7 @@ export default function Header() {
         })}
       </Link>
       {use3D && <Wordmark3D />}
+      {isHome && <FlameTrail active={!compact} />}
       <MenuPill show={compact} />
       <nav className="nav">
         <Link href="/work">Work</Link>

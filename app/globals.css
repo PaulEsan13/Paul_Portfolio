@@ -255,3 +255,7 @@ body:has(.cs) .footer { margin-left: var(--side); }
 .post-body figure, .post-body video { margin: 40px 0; width: 100%; }
 .post-body figure img { width: 100%; display: block; }
 .post-body figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+/* cursor flame trail on the intro screen (sits behind the name and menu) */
+.flame-trail { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none !important; opacity: 0; transition: opacity .4s; filter: blur(1.5px); }
+.flame-trail.on { opacity: 1; }
