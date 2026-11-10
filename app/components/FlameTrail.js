@@ -4,6 +4,9 @@
 // that rise, tear off and burn out. Biggest at the cursor; the path behind it dies quickly.
 import { useEffect, useRef } from "react";
 
+// No fire over the name, the menu, or any visual (showreel, project images/cards, blog covers).
+const NO_FIRE = ".wordmark, .pill, .reel, video, img, .work-card, .news-thumb, .blog-thumb, .work-index-item, .cs-img, .cs-grid, .post-video";
+
 const SCALE = 3;          // heat map is drawn at 1/3 resolution, then sharpened by the shader
 const VERT = `attribute vec2 p; varying vec2 uv; void main(){ uv = p*.5+.5; uv.y = 1.-uv.y; gl_Position = vec4(p,0.,1.); }`;
 const FRAG = `
@@ -106,8 +109,8 @@ export default function FlameTrail({ active }) {
     };
 
     const onMove = (e) => {
-      // no flame on the name itself — the letters' own animation takes over there
-      if (!activeRef.current || (e.target.closest && e.target.closest(".wordmark"))) { lx = ly = null; lastMove = -1e9; return; }
+      // no flame on the name or on visuals — only on the black areas
+      if (!activeRef.current || (e.target.closest && e.target.closest(NO_FIRE))) { lx = ly = null; lastMove = -1e9; return; }
       const x = e.clientX, y = e.clientY;
       if (lx === null) { lx = x; ly = y; }
       const d = Math.hypot(x - lx, y - ly), steps = Math.max(1, Math.min(12, Math.round(d / 10)));

@@ -92,7 +92,7 @@ export default function Header() {
         })}
       </Link>
       {use3D && <Wordmark3D />}
-      {isHome && <FlameTrail active={!compact} />}
+      <FlameTrail active />
       <MenuPill show={compact} />
       <nav className="nav">
         <Link href="/work">Work</Link>
