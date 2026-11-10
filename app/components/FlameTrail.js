@@ -7,7 +7,7 @@ import { useEffect, useRef } from "react";
 // No fire over the name, the menu, or any visual (showreel, project images/cards, blog covers).
 const NO_FIRE = ".wordmark, .pill, .reel, video, img, .work-card, .news-thumb, .blog-thumb, .work-index-item, .cs-img, .cs-grid, .post-video";
 
-const SCALE = 3;          // heat map is drawn at 1/3 resolution, then sharpened by the shader
+const SCALE = 2;          // heat map is drawn at 1/3 resolution, then sharpened by the shader
 const VERT = `attribute vec2 p; varying vec2 uv; void main(){ uv = p*.5+.5; uv.y = 1.-uv.y; gl_Position = vec4(p,0.,1.); }`;
 const FRAG = `
 precision highp float;
@@ -15,11 +15,11 @@ varying vec2 uv; uniform sampler2D heat; uniform float t; uniform vec2 res;
 float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
 float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
   return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
-float band(float e, float h){ return smoothstep(e-.035, e+.035, h); }
+float band(float e, float h){ return smoothstep(e-.05, e+.05, h); }
 void main(){
   vec2 q = uv * res / 90.;                         // noise scale in screen units
-  float n1 = n(q*1.0 + vec2(0., t*1.2));           // big licks, scrolling upward
-  float n2 = n(q*2.2 + vec2(4.3, t*1.9));          // small ragged detail
+  float n1 = n(q*.9 + vec2(0., t*1.0));           // big licks, scrolling upward
+  float n2 = n(q*2.0 + vec2(4.3, t*1.6));          // small ragged detail
   vec2 d = vec2((n1-.5)*.026 + (n2-.5)*.006, (n2-.5)*.008) * vec2(res.y/res.x, 1.);
   float h0 = texture2D(heat, uv + d).r;
   float h = h0 - ((n1-.5)*.10 + (n2-.5)*.035) * smoothstep(0., .12, h0); // tears the edge into tongues and loose flecks
@@ -27,10 +27,10 @@ void main(){
   vec3 col = red;
   col = mix(col, ora, band(.36, h));
   col = mix(col, yel, band(.60, h));
-  col = mix(col, cre, band(.97, h));
+  col = mix(col, cre, band(.93, h));
   float a = band(.17, h);
   float glow = smoothstep(.03, .17, h0) * .18 * (1.-a); // faint warm halo outside the hard edge
-  float o = .82; // overall strength — lower = subtler
+  float o = .95; // overall strength — lower = subtler
   gl_FragColor = vec4((col*a + red*glow)*o, (a + glow)*o);
 }`;
 
@@ -73,22 +73,29 @@ export default function FlameTrail({ active }) {
       g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(.5, "rgba(255,255,255,.5)"); g.addColorStop(1, "rgba(255,255,255,0)");
       x.fillStyle = g; x.fillRect(0, 0, 64, 64); }
 
-    let parts = [], raf = 0, running = false, last = 0, lx = null, ly = null, mx = 0, my = 0, lastMove = -1e9, t0 = performance.now(), emit = 0;
+    let parts = [], raf = 0, running = false, last = 0, lx = null, ly = null, mx = 0, my = 0, lastMove = -1e9, t0 = performance.now(), emit = 0, fx = null, fy = null;
 
     // core = the big flame at the cursor; trail = smaller, shorter-lived fire left on the path
     const spawn = (x, y, core) => {
-      if (parts.length > 500) return;
+      if (parts.length > 900) return;
       const r = Math.random;
       parts.push(core
-        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(90 + r() * 110), life: 0, max: .55 + r() * .45, size: 15 + r() * 13, heat: .18, ph: r() * 6.28 }
-        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(45 + r() * 60), life: 0, max: .4 + r() * .35, size: 9 + r() * 8, heat: .2, ph: r() * 6.28 });
+        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(110 + r() * 120), life: 0, max: .7 + r() * .5, size: 26 + r() * 22, heat: .13, ph: r() * 6.28 }
+        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(55 + r() * 70), life: 0, max: .5 + r() * .4, size: 16 + r() * 13, heat: .14, ph: r() * 6.28 });
       if (core && r() < .025) // sparks
         parts.push({ x, y, vx: (r() - .5) * 90, vy: -(130 + r() * 140), life: 0, max: .5 + r() * .4, size: 2.5 + r() * 2, heat: 1, ph: r() * 6.28, spark: true });
     };
 
     const tick = (now) => {
       const dt = Math.max(0, Math.min((now - last) / 1000, .05)); last = now;
-      if (activeRef.current && now - lastMove < 220) { emit += dt * 170; while (emit >= 1) { emit--; spawn(mx, my, true); } }
+      if (fx === null) { fx = mx; fy = my; }
+      const px = fx, py = fy, ease = 1 - Math.pow(0.0005, dt);   // frame-rate independent glide
+      fx += (mx - fx) * ease; fy += (my - fy) * ease;
+      if (activeRef.current && now - lastMove < 220) {
+        emit += dt * 260;
+        const cnt = Math.floor(emit); emit -= cnt;
+        for (let i = 1; i <= cnt; i++) spawn(px + ((fx - px) * i) / cnt, py + ((fy - py) * i) / cnt, true);
+      }
       hx.globalCompositeOperation = "source-over"; hx.globalAlpha = 1; hx.fillStyle = "#000"; hx.fillRect(0, 0, hc.width, hc.height);
       hx.globalCompositeOperation = "lighter";
       parts = parts.filter((p) => (p.life += dt) < p.max);
@@ -115,6 +122,7 @@ export default function FlameTrail({ active }) {
       if (lx === null) { lx = x; ly = y; }
       const d = Math.hypot(x - lx, y - ly), steps = Math.max(1, Math.min(12, Math.round(d / 10)));
       for (let s = 1; s <= steps; s++) spawn(lx + ((x - lx) * s) / steps, ly + ((y - ly) * s) / steps, false);
+      if (performance.now() - lastMove > 300) { fx = x; fy = y; }   // fresh start: no glide from an old spot
       lx = mx = x; ly = my = y; lastMove = performance.now();
       if (!running) { running = true; last = performance.now(); raf = requestAnimationFrame(tick); }
     };
