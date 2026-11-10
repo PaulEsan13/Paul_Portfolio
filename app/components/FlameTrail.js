@@ -30,7 +30,7 @@ void main(){
   col = mix(col, cre, band(.93, h));
   float a = band(.17, h);
   float glow = smoothstep(.03, .17, h0) * .18 * (1.-a); // faint warm halo outside the hard edge
-  float o = .86; // overall strength — lower = subtler
+  float o = .8; // overall strength — lower = subtler
   gl_FragColor = vec4((col*a + red*glow)*o, (a + glow)*o);
 }`;
 
@@ -80,8 +80,8 @@ export default function FlameTrail({ active }) {
       if (parts.length > 1100) return;
       const r = Math.random;
       parts.push(core
-        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(110 + r() * 120), life: 0, max: .7 + r() * .5, size: 22 + r() * 18, heat: .12, ph: r() * 6.28 }
-        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(55 + r() * 70), life: 0, max: .5 + r() * .4, size: 14 + r() * 11, heat: .13, ph: r() * 6.28 });
+        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(85 + r() * 95), life: 0, max: .6 + r() * .45, size: 15 + r() * 12, heat: .115, ph: r() * 6.28 }
+        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(55 + r() * 70), life: 0, max: .5 + r() * .4, size: 10 + r() * 8, heat: .12, ph: r() * 6.28 });
       if (core && r() < .025) // sparks
         parts.push({ x, y, vx: (r() - .5) * 90, vy: -(130 + r() * 140), life: 0, max: .5 + r() * .4, size: 2.5 + r() * 2, heat: 1, ph: r() * 6.28, spark: true });
     };
