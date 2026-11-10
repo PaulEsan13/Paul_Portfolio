@@ -15,11 +15,11 @@ varying vec2 uv; uniform sampler2D heat; uniform float t; uniform vec2 res;
 float h21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
 float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
   return mix(mix(h21(i),h21(i+vec2(1,0)),f.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x), f.y); }
-float band(float e, float h){ return smoothstep(e-.05, e+.05, h); }
+float band(float e, float h){ return smoothstep(e-.065, e+.065, h); }
 void main(){
   vec2 q = uv * res / 90.;                         // noise scale in screen units
-  float n1 = n(q*.9 + vec2(0., t*1.0));           // big licks, scrolling upward
-  float n2 = n(q*2.0 + vec2(4.3, t*1.6));          // small ragged detail
+  float n1 = n(q*.8 + vec2(0., t*.85));           // big licks, scrolling upward
+  float n2 = n(q*1.8 + vec2(4.3, t*1.3));          // small ragged detail
   vec2 d = vec2((n1-.5)*.026 + (n2-.5)*.006, (n2-.5)*.008) * vec2(res.y/res.x, 1.);
   float h0 = texture2D(heat, uv + d).r;
   float h = h0 - ((n1-.5)*.10 + (n2-.5)*.035) * smoothstep(0., .12, h0); // tears the edge into tongues and loose flecks
@@ -30,7 +30,7 @@ void main(){
   col = mix(col, cre, band(.93, h));
   float a = band(.17, h);
   float glow = smoothstep(.03, .17, h0) * .18 * (1.-a); // faint warm halo outside the hard edge
-  float o = .95; // overall strength — lower = subtler
+  float o = .86; // overall strength — lower = subtler
   gl_FragColor = vec4((col*a + red*glow)*o, (a + glow)*o);
 }`;
 
@@ -77,11 +77,11 @@ export default function FlameTrail({ active }) {
 
     // core = the big flame at the cursor; trail = smaller, shorter-lived fire left on the path
     const spawn = (x, y, core) => {
-      if (parts.length > 900) return;
+      if (parts.length > 1100) return;
       const r = Math.random;
       parts.push(core
-        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(110 + r() * 120), life: 0, max: .7 + r() * .5, size: 26 + r() * 22, heat: .13, ph: r() * 6.28 }
-        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(55 + r() * 70), life: 0, max: .5 + r() * .4, size: 16 + r() * 13, heat: .14, ph: r() * 6.28 });
+        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(110 + r() * 120), life: 0, max: .7 + r() * .5, size: 22 + r() * 18, heat: .12, ph: r() * 6.28 }
+        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(55 + r() * 70), life: 0, max: .5 + r() * .4, size: 14 + r() * 11, heat: .13, ph: r() * 6.28 });
       if (core && r() < .025) // sparks
         parts.push({ x, y, vx: (r() - .5) * 90, vy: -(130 + r() * 140), life: 0, max: .5 + r() * .4, size: 2.5 + r() * 2, heat: 1, ph: r() * 6.28, spark: true });
     };
@@ -89,10 +89,10 @@ export default function FlameTrail({ active }) {
     const tick = (now) => {
       const dt = Math.max(0, Math.min((now - last) / 1000, .05)); last = now;
       if (fx === null) { fx = mx; fy = my; }
-      const px = fx, py = fy, ease = 1 - Math.pow(0.0005, dt);   // frame-rate independent glide
+      const px = fx, py = fy, ease = 1 - Math.pow(0.002, dt);   // frame-rate independent glide
       fx += (mx - fx) * ease; fy += (my - fy) * ease;
       if (activeRef.current && now - lastMove < 220) {
-        emit += dt * 260;
+        emit += dt * 340;
         const cnt = Math.floor(emit); emit -= cnt;
         for (let i = 1; i <= cnt; i++) spawn(px + ((fx - px) * i) / cnt, py + ((fy - py) * i) / cnt, true);
       }
@@ -101,7 +101,7 @@ export default function FlameTrail({ active }) {
       parts = parts.filter((p) => (p.life += dt) < p.max);
       for (const p of parts) {
         const k = p.life / p.max;
-        p.x += (p.vx + Math.sin(now / 260 + p.ph) * (p.spark ? 6 : 20)) * dt;
+        p.x += (p.vx * .7 + Math.sin(now / 340 + p.ph) * (p.spark ? 5 : 16)) * dt;
         p.y += p.vy * dt; if (!p.spark) p.vy -= 110 * dt;
         const size = (p.spark ? p.size : p.size * (1 - k * .6)) / SCALE;   // tongues taper as they rise
         const fade = k < .15 ? k / .15 : 1;                                  // ease in, then smooth fade out
