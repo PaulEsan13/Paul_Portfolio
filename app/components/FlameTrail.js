@@ -27,7 +27,7 @@ void main(){
   col = mix(col, cre, band(.97, h));
   float a = band(.17, h);
   float glow = smoothstep(.03, .17, h0) * .18 * (1.-a); // faint warm halo outside the hard edge
-  float o = .82; // overall strength — lower = subtler
+  float o = .6; // overall strength — lower = subtler
   gl_FragColor = vec4((col*a + red*glow)*o, (a + glow)*o);
 }`;
 
@@ -77,15 +77,15 @@ export default function FlameTrail({ active }) {
       if (parts.length > 500) return;
       const r = Math.random;
       parts.push(core
-        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(90 + r() * 110), life: 0, max: .55 + r() * .45, size: 15 + r() * 13, heat: .18, ph: r() * 6.28 }
-        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(45 + r() * 60), life: 0, max: .4 + r() * .35, size: 9 + r() * 8, heat: .2, ph: r() * 6.28 });
-      if (core && r() < .025) // sparks
+        ? { x: x + (r() - .5) * 14, y: y + (r() - .5) * 6, vx: (r() - .5) * 50, vy: -(70 + r() * 80), life: 0, max: .45 + r() * .35, size: 9 + r() * 8, heat: .15, ph: r() * 6.28 }
+        : { x: x + (r() - .5) * 8, y: y + (r() - .5) * 8, vx: (r() - .5) * 30, vy: -(35 + r() * 45), life: 0, max: .32 + r() * .28, size: 6 + r() * 5, heat: .15, ph: r() * 6.28 });
+      if (core && r() < .012) // sparks
         parts.push({ x, y, vx: (r() - .5) * 90, vy: -(130 + r() * 140), life: 0, max: .5 + r() * .4, size: 2.5 + r() * 2, heat: 1, ph: r() * 6.28, spark: true });
     };
 
     const tick = (now) => {
       const dt = Math.max(0, Math.min((now - last) / 1000, .05)); last = now;
-      if (activeRef.current && now - lastMove < 220) { emit += dt * 170; while (emit >= 1) { emit--; spawn(mx, my, true); } }
+      if (activeRef.current && now - lastMove < 220) { emit += dt * 140; while (emit >= 1) { emit--; spawn(mx, my, true); } }
       hx.globalCompositeOperation = "source-over"; hx.globalAlpha = 1; hx.fillStyle = "#000"; hx.fillRect(0, 0, hc.width, hc.height);
       hx.globalCompositeOperation = "lighter";
       parts = parts.filter((p) => (p.life += dt) < p.max);
@@ -106,7 +106,8 @@ export default function FlameTrail({ active }) {
     };
 
     const onMove = (e) => {
-      if (!activeRef.current) { lx = ly = null; return; }
+      // no flame on the name itself — the letters' own animation takes over there
+      if (!activeRef.current || (e.target.closest && e.target.closest(".wordmark"))) { lx = ly = null; lastMove = -1e9; return; }
       const x = e.clientX, y = e.clientY;
       if (lx === null) { lx = x; ly = y; }
       const d = Math.hypot(x - lx, y - ly), steps = Math.max(1, Math.min(12, Math.round(d / 10)));
